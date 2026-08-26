@@ -423,6 +423,16 @@ export default function Planner() {
           .pl-cell:active { transform: scale(.94); }
           @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
           textarea { resize: none; }
+          .pl-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-wrap: nowrap;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1px;
+          }
+          .pl-scroll::-webkit-scrollbar { display: none; }
+          .pl-scroll > button { flex: 0 0 auto; }
         `}</style>
 
         <div style={{ maxWidth: 560, margin: "0 auto", paddingBottom: 92 }}>
@@ -1141,17 +1151,19 @@ function AddBar({ onAdd, fixedDate, placeholder }) {
         </button>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-        {!fixedDate && (
-          <>
-            <button onClick={() => { setDate(date === today ? null : today); setPick(false); }} style={chip(date === today, C.ink)}>오늘</button>
-            <button onClick={() => { setDate(date === tomorrow ? null : tomorrow); setPick(false); }} style={chip(date === tomorrow, C.ink)}>내일</button>
-            <button onClick={() => setPick((v) => !v)} style={chip(pick || (date && date !== today && date !== tomorrow), C.ink)}>
-              {date && date !== today && date !== tomorrow ? fmtDay(date) : "날짜"}
-            </button>
-            <span style={{ width: 1, background: C.line, margin: "2px 4px" }} />
-          </>
-        )}
+      {/* 첫째 줄 — 날짜 */}
+      {!fixedDate && (
+        <div className="pl-scroll" style={{ display: "flex", gap: 7, marginTop: 11 }}>
+          <button onClick={() => { setDate(date === today ? null : today); setPick(false); }} style={chip(date === today, C.ink)}>오늘</button>
+          <button onClick={() => { setDate(date === tomorrow ? null : tomorrow); setPick(false); }} style={chip(date === tomorrow, C.ink)}>내일</button>
+          <button onClick={() => setPick((v) => !v)} style={chip(pick || (date && date !== today && date !== tomorrow), C.ink)}>
+            {date && date !== today && date !== tomorrow ? fmtDay(date) : "날짜"}
+          </button>
+        </div>
+      )}
+
+      {/* 둘째 줄 — 분류 */}
+      <div className="pl-scroll" style={{ display: "flex", gap: 7, marginTop: 8 }}>
         {tags.map((t) => (
           <button key={t.id} onClick={() => setTag(tag === t.id ? null : t.id)} style={chip(tag === t.id, t.color)}>
             {tag === t.id ? "✓ " : ""}{t.label}
@@ -1913,4 +1925,3 @@ function MemoView({ memos, photos, onAdd, onPatch, onDel, onAddPhotos, onDelPhot
     </>
   );
 }
-
