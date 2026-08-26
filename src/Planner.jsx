@@ -331,7 +331,7 @@ export default function Planner() {
     });
   }, [data, photos, ready]);
 
-  const tags = data.profile.tags && data.profile.tags.length ? data.profile.tags : DEFAULT_TAGS;
+  const tags = data.profile.tags === undefined ? DEFAULT_TAGS : data.profile.tags;
 
   /* 자식들이 그려지기 전에 배율을 먼저 반영 */
   SCALE = data.profile.textScale || 1;
@@ -651,20 +651,15 @@ export default function Planner() {
 
 /* ─────────────────────────── 설정 ─────────────────────────── */
 function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, onClearBirth, onReset, onClose }) {
-  const [draft, setDraft] = useState(tags.map((t) => ({ ...t })));
   const [confirmReset, setConfirmReset] = useState(false);
 
-  const setLabel = (i, v) => setDraft((d) => d.map((t, j) => (j === i ? { ...t, label: v } : t)));
-  const setColor = (i, v) => setDraft((d) => d.map((t, j) => (j === i ? { ...t, color: v } : t)));
-  const remove = (i) => setDraft((d) => d.filter((_, j) => j !== i));
+  /* 바꾸는 즉시 저장 — 따로 저장 버튼을 누를 필요가 없습니다 */
+  const setLabel = (i, v) => onSaveTags(tags.map((t, j) => (j === i ? { ...t, label: v } : t)));
+  const setColor = (i, v) => onSaveTags(tags.map((t, j) => (j === i ? { ...t, color: v } : t)));
+  const remove = (i) => onSaveTags(tags.filter((_, j) => j !== i));
   const add = () =>
-    setDraft((d) => [...d, { id: uid(), label: "", color: PALETTE[d.length % PALETTE.length] }]);
-
-  const commit = () => {
-    const clean = draft.map((t) => ({ ...t, label: t.label.trim() })).filter((t) => t.label);
-    onSaveTags(clean.length ? clean : DEFAULT_TAGS);
-    onClose();
-  };
+    onSaveTags([...tags, { id: uid(), label: "", color: PALETTE[tags.length % PALETTE.length] }]);
+  const restore = () => onSaveTags(DEFAULT_TAGS.map((t) => ({ ...t })));
 
   return (
     <div
@@ -695,7 +690,7 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
           <div style={{ fontFamily: DISPLAY, fontSize: fs(23), fontWeight: 700, letterSpacing: -0.4 }}>설정</div>
           <button
             onClick={onClose}
-            style={{ border: "none", background: "none", fontSize: fs(26), color: C.muted, cursor: "pointer", lineHeight: 1, padding: 0 }}
+            style={{ border: "none", background: "none", fontSize: fs(26), color: C.muted, cursor: "pointer", lineHeight: 1, padding: `${px(6)}px ${px(8)}px` }}
           >
             ×
           </button>
@@ -737,42 +732,39 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
         </div>
 
         {/* 카테고리 */}
-        <div style={{ fontSize: fs(14), letterSpacing: 2, fontWeight: 700, color: C.muted, marginBottom: 5 }}>
+        <div style={{ fontSize: fs(11), letterSpacing: 2, fontWeight: 700, color: C.muted, marginBottom: 5 }}>
           내 카테고리
         </div>
-        <div style={{ fontSize: fs(15.5), color: C.inkSoft, lineHeight: 1.6, marginBottom: 11 }}>
-          본인이 주로 하는 일에 맞게 이름과 색을 바꾸세요. 할 일에 붙이면 캘린더 별 색으로도 나타납니다.
+        <div style={{ fontSize: fs(12.5), color: C.inkSoft, lineHeight: 1.6, marginBottom: 11 }}>
+          고치는 즉시 저장됩니다. 전부 지우면 분류 없이 쓸 수 있어요.
         </div>
 
-        {draft.map((t, i) => (
+        {tags.map((t, i) => (
           <div
             key={t.id}
-            style={{
-              background: C.surface,
-              border: `1px solid ${C.line}`,
-              borderRadius: 12,
-              padding: 11,
-              marginBottom: 8,
-            }}
+            style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: px(13), marginBottom: 8 }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span style={{ width: 11, height: 11, borderRadius: "50%", background: t.color, flexShrink: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 13, height: 13, borderRadius: "50%", background: t.color, flexShrink: 0 }} />
               <input
                 value={t.label}
                 onChange={(e) => setLabel(i, e.target.value)}
-                placeholder="예: 회의, 운동, 육아…"
+                placeholder="이름을 적어주세요"
                 maxLength={8}
                 style={{ flex: 1, border: "none", background: "none", fontSize: fs(17.5), fontWeight: 600, padding: 0, minWidth: 0 }}
               />
               <button
                 onClick={() => remove(i)}
                 aria-label="삭제"
-                style={{ border: "none", background: "none", color: C.muted, cursor: "pointer", fontSize: fs(21), lineHeight: 1, padding: "0 2px", flexShrink: 0 }}
+                style={{
+                  border: `1px solid ${C.line}`, background: C.surface, color: C.rose, cursor: "pointer",
+                  fontSize: fs(15), fontWeight: 700, borderRadius: 8, padding: `${px(7)}px ${px(12)}px`, flexShrink: 0,
+                }}
               >
-                ×
+                삭제
               </button>
             </div>
-            <div style={{ display: "flex", gap: 7, marginTop: 9, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap" }}>
               {PALETTE.map((c) => (
                 <button
                   key={c}
@@ -783,7 +775,7 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
                     height: px(28),
                     borderRadius: "50%",
                     background: c,
-                    border: t.color === c ? `2.5px solid ${C.ink}` : "2.5px solid transparent",
+                    border: t.color === c ? `3px solid ${C.ink}` : "3px solid transparent",
                     cursor: "pointer",
                     padding: 0,
                   }}
@@ -793,39 +785,60 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
           </div>
         ))}
 
-        {draft.length < 8 && (
+        {tags.length === 0 && (
+          <div style={{ fontSize: fs(13.5), color: C.inkSoft, lineHeight: 1.7, padding: "4px 2px 12px" }}>
+            카테고리가 없습니다. 분류 없이 할 일만 적어도 괜찮아요.
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+          {tags.length < 8 && (
+            <button
+              onClick={add}
+              style={{
+                flex: 1,
+                border: `1px dashed ${C.muted}`,
+                background: C.surface,
+                borderRadius: 12,
+                padding: `${px(12)}px 0`,
+                fontSize: fs(16.5),
+                fontWeight: 600,
+                color: C.inkSoft,
+                cursor: "pointer",
+              }}
+            >
+              + 추가
+            </button>
+          )}
           <button
-            onClick={add}
+            onClick={restore}
             style={{
-              width: "100%",
-              border: `1px dashed ${C.muted}`,
+              flex: 1,
+              border: `1px solid ${C.line}`,
               background: C.surface,
               borderRadius: 12,
-              padding: "11px 0",
+              padding: `${px(12)}px 0`,
               fontSize: fs(16.5),
               fontWeight: 600,
               color: C.inkSoft,
               cursor: "pointer",
-              marginTop: 2,
             }}
           >
-            + 카테고리 추가
+            처음으로 되돌리기
           </button>
-        )}
+        </div>
 
         {/* 사주 */}
-        <div style={{ fontSize: fs(14), letterSpacing: 2, fontWeight: 700, color: C.muted, margin: "24px 0 8px" }}>
+        <div style={{ fontSize: fs(11), letterSpacing: 2, fontWeight: 700, color: C.muted, margin: "24px 0 8px" }}>
           사주 정보
         </div>
-        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 12, padding: `${px(13)}px 13px`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           <div style={{ fontSize: fs(16.5), color: birth ? C.ink : C.muted, lineHeight: 1.5 }}>
             {birth ? (
               <>
                 {birth}
                 <span style={{ color: C.inkSoft }}>
-                  {birthHour === null || birthHour === undefined
-                    ? " · 시간 모름"
-                    : ` · ${JI[hourJi(Number(birthHour))]}시`}
+                  {birthHour === null || birthHour === undefined ? " · 시간 모름" : ` · ${JI[hourJi(Number(birthHour))]}시`}
                 </span>
               </>
             ) : (
@@ -835,7 +848,7 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
           {birth && (
             <button
               onClick={onClearBirth}
-              style={{ border: "none", background: "none", fontSize: fs(15.5), color: C.rose, cursor: "pointer", fontWeight: 600, flexShrink: 0, padding: 0 }}
+              style={{ border: "none", background: "none", fontSize: fs(15.5), color: C.rose, cursor: "pointer", fontWeight: 700, flexShrink: 0, padding: `${px(6)}px 2px` }}
             >
               지우기
             </button>
@@ -846,7 +859,7 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
         </div>
 
         {/* 저장 위치 */}
-        <div style={{ fontSize: fs(14), letterSpacing: 2, fontWeight: 700, color: C.muted, margin: "24px 0 8px" }}>
+        <div style={{ fontSize: fs(11), letterSpacing: 2, fontWeight: 700, color: C.muted, margin: "24px 0 8px" }}>
           저장 위치
         </div>
         <div style={{ fontSize: fs(15.5), color: C.inkSoft, lineHeight: 1.65 }}>
@@ -858,23 +871,20 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
         {/* 초기화 */}
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
           {confirmReset ? (
-            <div style={{ background: C.roseSoft, borderRadius: 12, padding: 13 }}>
+            <div style={{ background: C.roseSoft, borderRadius: 12, padding: px(14) }}>
               <div style={{ fontSize: fs(16.5), lineHeight: 1.6, marginBottom: 11 }}>
                 할 일·메모·사진·사주가 전부 지워집니다. 되돌릴 수 없어요.
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   onClick={() => setConfirmReset(false)}
-                  style={{ flex: 1, border: `1px solid ${C.line}`, background: C.surface, borderRadius: 9, padding: "9px 0", fontSize: fs(16.5), fontWeight: 600, cursor: "pointer" }}
+                  style={{ flex: 1, border: `1px solid ${C.line}`, background: C.surface, borderRadius: 9, padding: `${px(11)}px 0`, fontSize: fs(16.5), fontWeight: 600, cursor: "pointer" }}
                 >
                   취소
                 </button>
                 <button
-                  onClick={() => {
-                    onReset();
-                    onClose();
-                  }}
-                  style={{ flex: 1, border: "none", background: C.rose, color: "#fff", borderRadius: 9, padding: "9px 0", fontSize: fs(16.5), fontWeight: 700, cursor: "pointer" }}
+                  onClick={() => { onReset(); onClose(); }}
+                  style={{ flex: 1, border: "none", background: C.rose, color: "#fff", borderRadius: 9, padding: `${px(11)}px 0`, fontSize: fs(16.5), fontWeight: 700, cursor: "pointer" }}
                 >
                   전부 지우기
                 </button>
@@ -883,7 +893,7 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
           ) : (
             <button
               onClick={() => setConfirmReset(true)}
-              style={{ border: "none", background: "none", fontSize: fs(15.5), color: C.rose, cursor: "pointer", fontWeight: 600, padding: 0 }}
+              style={{ border: "none", background: "none", fontSize: fs(15.5), color: C.rose, cursor: "pointer", fontWeight: 600, padding: `${px(8)}px 0` }}
             >
               전체 초기화
             </button>
@@ -891,21 +901,21 @@ function Settings({ tags, onSaveTags, textScale, onTextScale, birth, birthHour, 
         </div>
 
         <button
-          onClick={commit}
+          onClick={onClose}
           style={{
             width: "100%",
             border: "none",
             background: C.ink,
             color: "#fff",
             borderRadius: 11,
-            padding: "13px 0",
+            padding: `${px(15)}px 0`,
             fontSize: fs(17.5),
             fontWeight: 700,
             cursor: "pointer",
             marginTop: 20,
           }}
         >
-          저장하고 닫기
+          닫기
         </button>
       </div>
     </div>
@@ -1097,7 +1107,7 @@ const chipStyle = (active, color) => ({
 
 /* ─────────────────────────── 입력창 ─────────────────────────── */
 function AddBar({ onAdd, fixedDate, placeholder }) {
-  const tags = useTags();
+  const tags = useTags().filter((t) => t.label.trim());
   const [text, setText] = useState("");
   const [date, setDate] = useState(fixedDate || null);
   const [tag, setTag] = useState(null);
@@ -1185,7 +1195,7 @@ function AddBar({ onAdd, fixedDate, placeholder }) {
 
 /* ─────────────────────────── 할 일 한 줄 ─────────────────────────── */
 function TodoRow({ t, today, onPatch, onDel, hideDate }) {
-  const tags = useTags();
+  const tags = useTags().filter((x) => x.label.trim());
   const tg = findTag(tags, t.tag);
   const late = t.date && t.date < today && !t.done;
   const [editing, setEditing] = useState(false);
